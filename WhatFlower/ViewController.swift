@@ -9,14 +9,15 @@
 import UIKit
 import CoreML
 import Vision
-import Alamofire
-import SwiftyJSON
+import SDWebImage
 
 class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
 
     @IBOutlet weak var imageView: UIImageView!
+    @IBOutlet weak var textLabel: UILabel!
     
     let imagePicker = UIImagePickerController()
+    var wikiManager = WikiManager()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -25,12 +26,17 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         imagePicker.delegate = self
         imagePicker.allowsEditing = true
         imagePicker.sourceType = .camera
+        
+        wikiManager.delegate = self
+        
+        // testing
+        self.wikiManager.fetchWikiInfo(flowerName: "Cyclamen")
     }
     
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
         
         if let userPickedImage = info[UIImagePickerController.InfoKey.editedImage] as? UIImage {
-            imageView.image = userPickedImage
+            //imageView.image = userPickedImage
             
             guard let ciimage = CIImage(image: userPickedImage) else {
                 fatalError("could not convert UIImage to CIImage")
@@ -52,10 +58,14 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
                 fatalError("Model failed to process image")
             }
             
-            print(results)
+            //print(results[0])
             
             if let firstResult = results.first {
-                self.navigationItem.title = firstResult.identifier.capitalized
+                let confidence = String(format: "%.2f", firstResult.confidence)
+                
+                self.navigationItem.title = "\(firstResult.identifier.capitalized) - \(confidence)"
+                
+                self.wikiManager.fetchWikiInfo(flowerName: firstResult.identifier)
             }
         }
         
@@ -68,6 +78,8 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         }
         
     }
+    
+    
 
     @IBAction func cameraPressed(_ sender: UIBarButtonItem) {
         imagePicker.sourceType = .camera
@@ -76,3 +88,19 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     
 }
 
+//MARK: - WikiManagerDelegate
+
+extension ViewController: WikiManagerDelegate {
+    func didUpdateWiki(_ wikiManager: WikiManager, wikiModel: WikiModel) {
+        
+        DispatchQueue.main.async {
+            self.textLabel.text = wikiModel.description
+            print(wikiModel.flowerImageURL)
+            self.imageView.sd_setImage(with: URL(string: wikiModel.flowerImageURL))
+        }
+    }
+    
+    func didFailWithError(error: Error) {
+        print(error)
+    }
+}

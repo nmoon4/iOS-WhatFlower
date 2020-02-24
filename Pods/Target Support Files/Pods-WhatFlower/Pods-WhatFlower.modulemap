@@ -1,4 +1,4 @@
-framework module Pods_WhatFlower {
+module Pods_WhatFlower {
   umbrella header "Pods-WhatFlower-umbrella.h"
 
   export *
